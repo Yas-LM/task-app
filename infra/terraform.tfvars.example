@@ -1,0 +1,15 @@
+project_name = "task-app"
+
+environment = "dev"
+
+location = "West Europe"
+
+postgres_admin_username = "test"
+
+postgres_database_name = "test"
+
+google_client_id = "xxx"
+
+github_repository          = "user/task-app"
+github_repository_owner_id = "xxxx"
+github_repository_id       = "xxxx"
