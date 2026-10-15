@@ -34,4 +34,4 @@ management:
 
 app:
   security:
-    google-client-id: ${GOOGLE_CLIENT_ID:612101287343-cotkdfgaudtp5cd4u6pabkgql764g6m6.apps.googleusercontent.com}
+    google-client-id: ${GOOGLE_CLIENT_ID:xxxx.apps.googleusercontent.com}
