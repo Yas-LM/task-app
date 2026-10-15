@@ -1,0 +1,97 @@
+name: Backend workflow
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ===================================================
+      # Checkout
+      # ===================================================
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # ===================================================
+      # Java
+      # ===================================================
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # ===================================================
+      # Test
+      # ===================================================
+
+      - name: Run tests
+        working-directory: backend
+        run: ./mvnw test
+
+      # ===================================================
+      # Azure login via OIDC
+      # ===================================================
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ===================================================
+      # Login to ACR
+      # ===================================================
+
+      - name: Login to ACR
+        run: |
+          az acr login --name "${{ vars.ACR_NAME }}"
+
+      # ===================================================
+      # Docker build
+      # ===================================================
+
+      - name: Build Docker image
+        working-directory: backend
+        run: |
+          docker build \
+            -t "${{ vars.ACR_NAME }}.azurecr.io/${{ vars.IMAGE_NAME }}:${{ github.sha }}" \
+            .
+
+      # ===================================================
+      # Push image
+      # ===================================================
+
+      - name: Push Docker image
+        run: |
+          docker push \
+            "${{ vars.ACR_NAME }}.azurecr.io/${{ vars.IMAGE_NAME }}:${{ github.sha }}"
+
+      # ===================================================
+      # Deploy new Container Apps revision
+      # ===================================================
+
+      - name: Deploy Container App
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          acrName: ${{ vars.ACR_NAME }}
+          containerAppName: ${{ vars.CONTAINER_APP_NAME }}
+          resourceGroup: ${{ vars.RESOURCE_GROUP }}
+          imageToDeploy: ${{ vars.ACR_NAME }}.azurecr.io/${{ vars.IMAGE_NAME }}:${{ github.sha }}
